@@ -12,6 +12,15 @@ const API_URL = (
 
 const moods = ['Slow & sunny', 'Curious & cultural', 'Food-first', 'Outdoorsy', 'A little fancy']
 const interestOptions = ['Good coffee', 'Local food', 'Art & culture', 'Nature', 'Shopping', 'Live music']
+const thinkingStages = [
+  'Reading your Saturday brief',
+  'Parsing preferences',
+  'Looking up nearby places',
+  'Selecting activities and food',
+  'Estimating cost and timing',
+  'Validating the plan',
+  'Writing your itinerary',
+]
 
 const initialForm = {
   city: '',
@@ -39,16 +48,16 @@ function App() {
     setError('')
     setPlan(null)
     setStatus('loading')
-    setTrace([
-      'Reading your Saturday brief…',
-      'Parsing preferences',
-      'Looking up nearby places',
-      'Selecting activities and food',
-      'Estimating cost and timing',
-      'Validating the plan',
-      'Writing your itinerary',
-    ])
-    const timer = setTimeout(() => {}, 650)
+    setTrace(thinkingStages.map((label, index) => ({ label, status: index === 0 ? 'running' : 'pending' })))
+    let activeStage = 0
+    const startedAt = Date.now()
+    const timer = setInterval(() => {
+      activeStage += 1
+      setTrace((items) => items.map((item, index) => ({
+        ...item,
+        status: index < activeStage ? 'completed' : index === activeStage ? 'running' : 'pending',
+      })))
+    }, 800)
     try {
       const response = await fetch(`${API_URL}/api/plan`, {
         method: 'POST',
@@ -59,14 +68,19 @@ function App() {
           available_time: form.time,
         }),
       })
-      clearTimeout(timer)
       if (!response.ok) throw new Error(`Request failed (${response.status})`)
       const data = await response.json()
-      setTrace((data.trace || []).map((item) => `${item.stage.replaceAll('_', ' ')}: ${item.status || 'complete'}`))
+      const remaining = Math.max(0, 1400 - (Date.now() - startedAt))
+      if (remaining) await new Promise((resolve) => setTimeout(resolve, remaining))
+      clearInterval(timer)
+      setTrace((data.trace || []).map((item) => ({
+        label: item.stage.replaceAll('_', ' '),
+        status: 'completed',
+      })))
       setPlan(normalizePlan(data, form))
       setStatus('success')
     } catch (requestError) {
-      clearTimeout(timer)
+      clearInterval(timer)
       setTrace([])
       setError(requestError.message.includes('Failed to fetch')
         ? 'We could not reach the planner. Check that the backend is running and try again.'
@@ -143,7 +157,7 @@ function EmptyState() {
 }
 
 function Trace({ trace }) {
-  return <details className="trace-card" open><summary className="trace-summary"><span className="loader-orb"><LoaderCircle className="spin" size={20} /></span><span><p className="eyebrow">Working on it</p><h2>Curating your day<span className="blink">…</span></h2></span><ChevronDown size={18} /></summary><div className="trace-list">{trace.map((line) => <div className="trace-line" key={line}><span className="trace-dot"><Check size={10} /></span>{line}</div>)}</div></details>
+  return <details className="trace-card" open><summary className="trace-summary"><span className="loader-orb"><LoaderCircle className="spin" size={20} /></span><span><p className="eyebrow">Working on it</p><h2>Curating your day<span className="blink">…</span></h2></span><ChevronDown size={18} /></summary><div className="trace-list">{trace.map((item) => <div className={`trace-line ${item.status}`} key={item.label}><span className="trace-dot">{item.status === 'completed' ? <Check size={10} /> : item.status === 'running' ? <span className="trace-pulse" /> : null}</span>{item.label}{item.status === 'running' && <small>working…</small>}</div>)}</div></details>
 }
 
 function ErrorState({ message, retry }) {
