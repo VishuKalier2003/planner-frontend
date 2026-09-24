@@ -52,7 +52,7 @@ function App() {
       const data = await response.json()
       setTrace((items) => [
         ...items,
-        ...(data.trace || []).map((item) => `${item.stage.replaceAll('_', ' ')} complete`),
+        ...(data.trace || []).map((item) => `${item.stage.replaceAll('_', ' ')}: ${item.status || 'complete'}`),
         'Your plan is ready.',
       ])
       setPlan(normalizePlan(data, form))
@@ -143,7 +143,7 @@ function ErrorState({ message, retry }) {
 }
 
 function PlanView({ plan, reset }) {
-  return <div className="plan-view"><div className="plan-top"><div><p className="eyebrow"><span className="eyebrow-dot" /> Your Saturday in {plan.city}</p><h2>{plan.title}</h2></div><button className="reset-button" onClick={reset}>Start over</button></div><p className="plan-intro">{plan.intro}</p>{plan.notice && <p className="plan-notice">{plan.notice}</p>}<div className="stops">{plan.stops.map((stop, i) => <article className="stop" key={`${stop.time}-${i}`}><div className="stop-time">{stop.time}</div><div className="stop-marker">{i + 1}</div><div className="stop-body"><div className="stop-heading"><h3>{stop.title}</h3><span className="tag">{stop.category}</span></div><p>{stop.description}</p>{stop.cost && <span className="cost">INR {stop.cost}</span>}</div></article>)}</div><div className="plan-bottom"><div><span className="summary-label">Estimated total</span><strong>INR {plan.total}</strong></div><div className="rationale"><span className="summary-label">Why it works</span><p>{plan.rationale}</p></div></div></div>
+  return <div className="plan-view"><div className="plan-top"><div><p className="eyebrow"><span className="eyebrow-dot" /> Your Saturday in {plan.city}</p><h2>{plan.title}</h2></div><button className="reset-button" onClick={reset}>Start over</button></div><p className="plan-intro">{plan.intro}</p>{plan.notice && <p className="plan-notice">{plan.notice}</p>}<div className="source-note">{plan.source === 'openstreetmap' ? 'Live places via OpenStreetMap' : 'Curated fallback suggestions'} · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">data attribution</a></div><div className="stops">{plan.stops.map((stop, i) => <article className="stop" key={`${stop.time}-${i}`}><div className="stop-time">{stop.time}</div><div className="stop-marker">{i + 1}</div><div className="stop-body"><div className="stop-heading"><h3>{stop.title}</h3><span className="tag">{stop.category}</span></div><p>{stop.description}</p>{stop.cost && <span className="cost">INR {stop.cost}</span>}</div></article>)}</div><div className="plan-bottom"><div><span className="summary-label">Estimated total</span><strong>INR {plan.total}</strong></div><div className="rationale"><span className="summary-label">Why it works</span><p>{plan.rationale}</p>{plan.tradeoffs.map((tradeoff) => <p className="tradeoff" key={tradeoff}>Trade-off: {tradeoff}</p>)}</div></div>{plan.questions.length > 0 && <div className="questions"><span className="summary-label">To sharpen the next version</span>{plan.questions.map((question) => <p key={question}>{question}</p>)}</div>}</div>
 }
 
 function normalizePlan(data, form) {
@@ -157,6 +157,9 @@ function normalizePlan(data, form) {
     total: source.total || source.total_cost || source.estimated_total || source.estimated_cost || 'Within your budget',
     rationale: source.rationale || source.reasoning || 'The pace keeps the day feeling spacious while making room for your interests and constraints.',
     notice: data.fallback?.used ? data.fallback.message : data.validation?.warnings?.join(' ') || '',
+    source: source.source || 'mock',
+    tradeoffs: source.tradeoffs || [],
+    questions: data.clarifying_questions || [],
   }
 }
 
