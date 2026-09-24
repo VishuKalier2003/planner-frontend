@@ -37,6 +37,8 @@ function App() {
   const [trace, setTrace] = useState([])
   const [plan, setPlan] = useState(null)
   const [error, setError] = useState('')
+  const [questions, setQuestions] = useState([])
+  const [answers, setAnswers] = useState({})
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const toggleInterest = (interest) => update('interests', form.interests.includes(interest)
@@ -48,6 +50,10 @@ function App() {
     setError('')
     setPlan(null)
     setStatus('loading')
+    const refinementText = event.refinement
+      ? Object.values(answers).filter(Boolean).join(', ')
+      : ''
+    const submittedConstraints = [form.constraints, refinementText].filter(Boolean).join(', ')
     setTrace(thinkingStages.map((label, index) => ({ label, status: index === 0 ? 'running' : 'pending' })))
     let activeStage = 0
     const startedAt = Date.now()
@@ -66,6 +72,7 @@ function App() {
           ...form,
           budget: Number(form.budget) || 0,
           available_time: form.time,
+          constraints: submittedConstraints,
         }),
       })
       if (!response.ok) throw new Error(`Request failed (${response.status})`)
@@ -78,6 +85,8 @@ function App() {
         status: 'completed',
       })))
       setPlan(normalizePlan(data, form))
+      setQuestions(data.clarifying_questions || [])
+      setAnswers({})
       setStatus('success')
     } catch (requestError) {
       clearInterval(timer)
@@ -140,7 +149,7 @@ function App() {
           {status === 'idle' && <EmptyState />}
           {status === 'loading' && <Trace trace={trace} />}
           {status === 'error' && <ErrorState message={error} retry={() => createPlan({ preventDefault: () => {} })} />}
-          {status === 'success' && <PlanView plan={plan} reset={() => { setStatus('idle'); setPlan(null); setTrace([]) }} />}
+          {status === 'success' && <PlanView plan={plan} questions={questions} answers={answers} setAnswer={(index, value) => setAnswers((current) => ({ ...current, [index]: value }))} refine={() => createPlan({ preventDefault: () => {}, refinement: true })} reset={() => { setStatus('idle'); setPlan(null); setTrace([]); setQuestions([]) }} />}
         </section>
       </div>
       <footer><span>Made for unhurried weekends.</span><span>✦</span><span>No itinerary overwhelm.</span></footer>
@@ -164,8 +173,8 @@ function ErrorState({ message, retry }) {
   return <div className="empty-state error-state"><div className="empty-icon"><X size={25} /></div><p className="eyebrow">A small detour</p><h2>We couldn’t finish<br /><em>your plan just yet.</em></h2><p>{message || 'Something unexpected happened. Please try again.'}</p><button className="text-button" onClick={retry}><RefreshCw size={16} /> Try again</button></div>
 }
 
-function PlanView({ plan, reset }) {
-  return <div className="plan-view"><div className="plan-top"><div><p className="eyebrow"><span className="eyebrow-dot" /> Your Saturday in {plan.city}</p><h2>{plan.title}</h2></div><button className="reset-button" onClick={reset}>Start over</button></div><p className="plan-intro">{plan.intro}</p>{plan.notice && <p className={`plan-notice ${plan.cityFallback ? 'info-notice' : ''}`}>{plan.notice}</p>}<div className="source-note">{plan.source === 'openstreetmap' ? 'Live places via OpenStreetMap' : 'Curated suggestions'} · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">data attribution</a></div><div className="stops">{plan.stops.map((stop, i) => <article className="stop" key={`${stop.time}-${i}`}><div className="stop-time">{stop.time}</div><div className="stop-marker">{i + 1}</div><div className="stop-body"><div className="stop-heading"><h3>{stop.title}</h3><span className="tag">{stop.category}</span></div><p>{stop.description}</p><div className="stop-meta"><span className="cost">INR {stop.cost}</span><a className="map-link" href={stop.mapUrl} target="_blank" rel="noreferrer"><MapPin size={13} /> Open map</a></div></div></article>)}</div><div className="plan-bottom"><div><span className="summary-label">Estimated total</span><strong>INR {plan.total}</strong></div><div className="rationale"><span className="summary-label">Why it works</span><p>{plan.rationale}</p>{plan.tradeoffs.map((tradeoff) => <p className="tradeoff" key={tradeoff}>Trade-off: {tradeoff}</p>)}</div></div>{plan.questions.length > 0 && <div className="questions"><span className="summary-label">To sharpen the next version</span>{plan.questions.map((question) => <p key={question}>{question}</p>)}</div>}</div>
+function PlanView({ plan, questions, answers, setAnswer, refine, reset }) {
+  return <div className="plan-view"><div className="plan-top"><div><p className="eyebrow"><span className="eyebrow-dot" /> Your Saturday in {plan.city}</p><h2>{plan.title}</h2></div><button className="reset-button" onClick={reset}>Start over</button></div><p className="plan-intro">{plan.intro}</p>{plan.notice && <p className={`plan-notice ${plan.cityFallback ? 'info-notice' : ''}`}>{plan.notice}</p>}<div className="source-note">{plan.source === 'openstreetmap' ? 'Live places via OpenStreetMap' : 'Curated suggestions'} · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">data attribution</a></div><div className="stops">{plan.stops.map((stop, i) => <article className="stop" key={`${stop.time}-${i}`}><div className="stop-time">{stop.time}</div><div className="stop-marker">{i + 1}</div><div className="stop-body"><div className="stop-heading"><h3>{stop.title}</h3><span className="tag">{stop.category}</span></div><p>{stop.description}</p><div className="stop-meta"><span className="cost">INR {stop.cost}</span><a className="map-link" href={stop.mapUrl} target="_blank" rel="noreferrer"><MapPin size={13} /> Open map</a></div></div></article>)}</div><div className="plan-bottom"><div><span className="summary-label">Estimated total</span><strong>INR {plan.total}</strong></div><div className="rationale"><span className="summary-label">Why it works</span><p>{plan.rationale}</p>{plan.tradeoffs.map((tradeoff) => <p className="tradeoff" key={tradeoff}>Trade-off: {tradeoff}</p>)}</div></div>{questions.length > 0 && <div className="questions"><span className="summary-label">One quick follow-up</span>{questions.map((question, index) => <label className="question-field" key={question}>{question}<input value={answers[index] || ''} onChange={(event) => setAnswer(index, event.target.value)} placeholder="Your answer" /></label>)}<button className="text-button" onClick={refine}>Refine my plan <ArrowRight size={14} /></button></div>}</div>
 }
 
 function normalizePlan(data, form) {

@@ -136,6 +136,17 @@ Useful edge cases to try:
 | City `Atlantis` | Returns a graceful city fallback notice |
 | `All day` with several interests | Adds more activities while respecting time |
 
+### When clarification questions appear
+
+The agent asks one or two follow-up questions when the brief is underspecified:
+
+- No interests are selected.
+- The user has only a very short relaxed/slow plan (three hours or less).
+
+The questions appear below the first plan with answer fields. Select **Refine
+my plan** to send those answers back through the same planner tools as
+additional constraints. Normal, specific briefs skip this interaction.
+
 ## Test the API directly
 
 From PowerShell:
@@ -222,4 +233,3 @@ their contracts, tested edge cases, and iterated on deployment behavior. This
 kept the work parallel without hiding the reasoning—the planner exposes its
 actual stages, live-data lookup status, fallbacks, validation, and trade-offs
 in the product itself.
-
