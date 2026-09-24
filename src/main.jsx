@@ -39,8 +39,16 @@ function App() {
     setError('')
     setPlan(null)
     setStatus('loading')
-    setTrace(['Reading your Saturday brief…'])
-    const timer = setTimeout(() => setTrace((items) => [...items, 'Finding the best local rhythm…']), 650)
+    setTrace([
+      'Reading your Saturday brief…',
+      'Parsing preferences',
+      'Looking up nearby places',
+      'Selecting activities and food',
+      'Estimating cost and timing',
+      'Validating the plan',
+      'Writing your itinerary',
+    ])
+    const timer = setTimeout(() => {}, 650)
     try {
       const response = await fetch(`${API_URL}/api/plan`, {
         method: 'POST',
@@ -54,11 +62,7 @@ function App() {
       clearTimeout(timer)
       if (!response.ok) throw new Error(`Request failed (${response.status})`)
       const data = await response.json()
-      setTrace((items) => [
-        ...items,
-        ...(data.trace || []).map((item) => `${item.stage.replaceAll('_', ' ')}: ${item.status || 'complete'}`),
-        'Your plan is ready.',
-      ])
+      setTrace((data.trace || []).map((item) => `${item.stage.replaceAll('_', ' ')}: ${item.status || 'complete'}`))
       setPlan(normalizePlan(data, form))
       setStatus('success')
     } catch (requestError) {
@@ -122,7 +126,7 @@ function App() {
           {status === 'idle' && <EmptyState />}
           {status === 'loading' && <Trace trace={trace} />}
           {status === 'error' && <ErrorState message={error} retry={() => createPlan({ preventDefault: () => {} })} />}
-          {status === 'success' && <PlanView plan={plan} trace={trace} reset={() => { setStatus('idle'); setPlan(null); setTrace([]) }} />}
+          {status === 'success' && <PlanView plan={plan} reset={() => { setStatus('idle'); setPlan(null); setTrace([]) }} />}
         </section>
       </div>
       <footer><span>Made for unhurried weekends.</span><span>✦</span><span>No itinerary overwhelm.</span></footer>
@@ -139,15 +143,15 @@ function EmptyState() {
 }
 
 function Trace({ trace }) {
-  return <div className="trace-card"><div className="trace-heading"><span className="loader-orb"><LoaderCircle className="spin" size={20} /></span><div><p className="eyebrow">Working on it</p><h2>Curating your day<span className="blink">…</span></h2></div></div><div className="trace-list">{trace.map((line, i) => <div className="trace-line" key={line}><span className={i === trace.length - 1 ? 'trace-dot active' : 'trace-dot'}>{i < trace.length - 1 && <Check size={11} />}</span>{line}</div>)}</div></div>
+  return <details className="trace-card" open><summary className="trace-summary"><span className="loader-orb"><LoaderCircle className="spin" size={20} /></span><span><p className="eyebrow">Working on it</p><h2>Curating your day<span className="blink">…</span></h2></span><ChevronDown size={18} /></summary><div className="trace-list">{trace.map((line, i) => <div className="trace-line" key={line}><span className="trace-dot active" />{line}</div>)}</div></details>
 }
 
 function ErrorState({ message, retry }) {
   return <div className="empty-state error-state"><div className="empty-icon"><X size={25} /></div><p className="eyebrow">A small detour</p><h2>We couldn’t finish<br /><em>your plan just yet.</em></h2><p>{message || 'Something unexpected happened. Please try again.'}</p><button className="text-button" onClick={retry}><RefreshCw size={16} /> Try again</button></div>
 }
 
-function PlanView({ plan, trace, reset }) {
-  return <div className="plan-view"><div className="plan-top"><div><p className="eyebrow"><span className="eyebrow-dot" /> Your Saturday in {plan.city}</p><h2>{plan.title}</h2></div><button className="reset-button" onClick={reset}>Start over</button></div><p className="plan-intro">{plan.intro}</p>{plan.notice && <p className="plan-notice">{plan.notice}</p>}<div className="source-note">{plan.source === 'openstreetmap' ? 'Live places via OpenStreetMap' : 'Curated suggestions'} · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">data attribution</a></div><div className="stops">{plan.stops.map((stop, i) => <article className="stop" key={`${stop.time}-${i}`}><div className="stop-time">{stop.time}</div><div className="stop-marker">{i + 1}</div><div className="stop-body"><div className="stop-heading"><h3>{stop.title}</h3><span className="tag">{stop.category}</span></div><p>{stop.description}</p>{stop.cost && <span className="cost">INR {stop.cost}</span>}</div></article>)}</div><div className="plan-bottom"><div><span className="summary-label">Estimated total</span><strong>INR {plan.total}</strong></div><div className="rationale"><span className="summary-label">Why it works</span><p>{plan.rationale}</p>{plan.tradeoffs.map((tradeoff) => <p className="tradeoff" key={tradeoff}>Trade-off: {tradeoff}</p>)}</div></div>{plan.questions.length > 0 && <div className="questions"><span className="summary-label">To sharpen the next version</span>{plan.questions.map((question) => <p key={question}>{question}</p>)}</div>}<div className="completed-trace"><span className="summary-label">Agent trace</span>{trace.map((line) => <div className="completed-trace-line" key={line}><Check size={13} />{line}</div>)}</div></div>
+function PlanView({ plan, reset }) {
+  return <div className="plan-view"><div className="plan-top"><div><p className="eyebrow"><span className="eyebrow-dot" /> Your Saturday in {plan.city}</p><h2>{plan.title}</h2></div><button className="reset-button" onClick={reset}>Start over</button></div><p className="plan-intro">{plan.intro}</p>{plan.notice && <p className="plan-notice">{plan.notice}</p>}<div className="source-note">{plan.source === 'openstreetmap' ? 'Live places via OpenStreetMap' : 'Curated suggestions'} · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">data attribution</a></div><div className="stops">{plan.stops.map((stop, i) => <article className="stop" key={`${stop.time}-${i}`}><div className="stop-time">{stop.time}</div><div className="stop-marker">{i + 1}</div><div className="stop-body"><div className="stop-heading"><h3>{stop.title}</h3><span className="tag">{stop.category}</span></div><p>{stop.description}</p><div className="stop-meta"><span className="cost">INR {stop.cost}</span><a className="map-link" href={stop.mapUrl} target="_blank" rel="noreferrer"><MapPin size={13} /> Open map</a></div></div></article>)}</div><div className="plan-bottom"><div><span className="summary-label">Estimated total</span><strong>INR {plan.total}</strong></div><div className="rationale"><span className="summary-label">Why it works</span><p>{plan.rationale}</p>{plan.tradeoffs.map((tradeoff) => <p className="tradeoff" key={tradeoff}>Trade-off: {tradeoff}</p>)}</div></div>{plan.questions.length > 0 && <div className="questions"><span className="summary-label">To sharpen the next version</span>{plan.questions.map((question) => <p key={question}>{question}</p>)}</div>}</div>
 }
 
 function normalizePlan(data, form) {
@@ -157,7 +161,7 @@ function normalizePlan(data, form) {
     city: source.city || data.fallback?.resolved_city || form.city,
     title: source.title || 'A day with good energy',
     intro: source.intro || source.summary || 'A gentle route through the things you love, with enough breathing room between each stop.',
-    stops: stops.map((stop) => ({ time: stop.time || stop.start_time || '10:00', title: stop.title || stop.activity || stop.name || 'A lovely stop', category: stop.category || stop.type || 'Experience', description: stop.description || stop.details || 'A relaxed stop selected to match your brief.', cost: stop.cost || stop.price || '' })),
+    stops: stops.map((stop) => ({ time: stop.time || stop.start_time || '10:00', title: stop.title || stop.activity || stop.name || 'A lovely stop', category: stop.category || stop.type || 'Experience', description: stop.description || stop.details || 'A relaxed stop selected to match your brief.', cost: stop.cost ?? stop.price ?? 0, mapUrl: stop.map_url || stop.mapUrl || '#' })),
     total: source.total || source.total_cost || source.estimated_total || source.estimated_cost || 'Within your budget',
     rationale: source.rationale || source.reasoning || 'The pace keeps the day feeling spacious while making room for your interests and constraints.',
     notice: data.fallback?.used ? data.fallback.message : data.validation?.warnings?.join(' ') || '',
