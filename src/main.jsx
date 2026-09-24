@@ -6,7 +6,9 @@ import {
 } from 'lucide-react'
 import './styles.css'
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+const API_URL = (
+  import.meta.env.VITE_API_URL || 'https://planner-backend-sooty.vercel.app'
+).replace(/\/$/, '')
 
 const moods = ['Slow & sunny', 'Curious & cultural', 'Food-first', 'Outdoorsy', 'A little fancy']
 const interestOptions = ['Good coffee', 'Local food', 'Art & culture', 'Nature', 'Shopping', 'Live music']

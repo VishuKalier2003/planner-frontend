@@ -10,7 +10,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The app posts the form as JSON to `${VITE_API_URL}/plan`. `VITE_API_URL` defaults to `http://localhost:8000`, so it can be omitted when the backend is running locally. The response may include `plan`, or return the plan fields (`title`, `intro`, `stops`, `total`, and `rationale`) at the top level.
+The app posts the form as JSON to `${VITE_API_URL}/api/plan`. `VITE_API_URL` defaults to the deployed demo backend, so a local `.env` is optional when testing against the hosted API. To use a local backend instead, set `VITE_API_URL=http://localhost:8000`. The response includes a plan, validation details, fallback information, and an execution trace.
 
 ## Production build
 
@@ -23,7 +23,7 @@ npm run preview
 
 ### Vercel
 
-Import the repository in Vercel and set **Root Directory** to `frontend`. Vercel detects Vite automatically. Add `VITE_API_URL` in **Settings → Environment Variables** with the public URL of your deployed backend (for example `https://api.example.com`), then redeploy.
+Import the repository in Vercel and set **Root Directory** to `frontend`. Vercel detects Vite automatically. Add `VITE_API_URL=https://planner-backend-sooty.vercel.app` in **Settings → Environment Variables**, then redeploy.
 
 ### Netlify
 
