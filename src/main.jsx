@@ -73,6 +73,7 @@ function App() {
           budget: Number(form.budget) || 0,
           available_time: form.time,
           constraints: submittedConstraints,
+          clarifications_answered: Boolean(event.refinement),
         }),
       })
       if (!response.ok) throw new Error(`Request failed (${response.status})`)
